@@ -4,7 +4,6 @@
  */
 
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
-import { MreArgumentError } from '@microsoft/mixed-reality-extension-sdk';
 
 /**
  * Solar system database
@@ -212,9 +211,39 @@ export default class SolarSystem {
 				}
 			});
 			model.appearance.enabled = facts.appearance;
-						
+			
+			
 			const buttonBehavior = model.setBehavior(MRE.ButtonBehavior);
 			
+			buttonBehavior.onHover('enter', () => {
+				this.boxAnimationEnter()
+				/*
+				clearInterval(this.animationLoopIterval);				
+				MRE.Animation.AnimateTo(this.context, position, {
+					destination: { transform: { local: { position: { y: 0.05 } } } },
+					duration: 1,
+					easing: MRE.AnimationEaseCurves.EaseOutSine
+				});		
+				*/						
+			});
+
+			
+			buttonBehavior.onHover('exit', () => {
+				this.animationPlayPause(bodyName);
+				this.boxAnimationExit()
+				/*
+				MRE.Animation.AnimateTo(this.context, position, {
+					destination: { transform: { local: { position: { y: 0} } } },
+					duration: 1,
+					easing: MRE.AnimationEaseCurves.EaseOutSine,
+				});
+				this.childBoxTimeout = setTimeout(() => {	
+					this.celestialBodies["Digital_twin_v3_with_txtr1"].model.appearance.enabled = false;	
+				},3000);
+				*/
+				
+			});
+
 			label.enableText({
 				contents: facts.name,
 				height: 0.05,
@@ -239,26 +268,20 @@ export default class SolarSystem {
 				this.animationPlayPause(bodyName);
 				buttonBehavior.onClick(() => {
 					this.childModelDisplay();			
-				});			
-				
-				buttonBehavior.onHover('enter', () => {
-					this.boxAnimationEnter();								
-				});			
-				buttonBehavior.onHover('exit', () => {
-					this.animationPlayPause(bodyName);
-					this.boxAnimationExit();				
-				});
+				});				
 			}
 
 
-			if(bodyName === "only_gear"){				
+			if(bodyName === "only_gear"){
+				
+				
 				const AnimData: MRE.AnimationDataLike = { tracks: [{
 					target: MRE.ActorPath("model").transform.local.rotation,
 					relative: true,
 					easing: MRE.AnimationEaseCurves.Linear,
 					keyframes: [
 						//{ time: 0.3, value: MRE.Quaternion.FromEulerAngles(0, 0, -Math.PI / 2) }
-						{time: 0.3, value: MRE.Quaternion.FromEulerAngles(0, 0, 5) }
+						{ time: 0.5, value: MRE.Quaternion.FromEulerAngles(0, 0, .5) }
 					]
 				}]};
 
@@ -278,8 +301,7 @@ export default class SolarSystem {
 		const celestialBody = this.celestialBodies[bodyName];
 		this.animationLoopIterval = setInterval(() => {			
 			if(this.labelLoopInc < 5) {
-				celestialBody.label.transform.local.position.y = 
-				celestialBody.label.transform.local.position.y + 0.01;
+				celestialBody.label.transform.local.position.y = celestialBody.label.transform.local.position.y + 0.01;
 				this.labelLoopInc = this.labelLoopInc + 1;
 				if(this.labelLoopInc === 5){
 					this.labelLoopInc = 10;
@@ -287,8 +309,7 @@ export default class SolarSystem {
 			}
 			else{
 				
-				celestialBody.label.transform.local.position.y = 
-				celestialBody.label.transform.local.position.y - 0.01;
+				celestialBody.label.transform.local.position.y = celestialBody.label.transform.local.position.y - 0.01;
 				this.labelLoopInc = this.labelLoopInc - 1;
 				if(this.labelLoopInc === 5){
 					this.labelLoopInc = 0;
@@ -301,12 +322,12 @@ export default class SolarSystem {
 		const boxModel = this.celestialBodies["box_model_cloud"];
 		const gearModel = this.celestialBodies["only_gear"];
 		MRE.Animation.AnimateTo(this.context, boxModel.position, {	
-			destination: { transform: { local: { position: { y: 0.1 } } } },
+			destination: { transform: { local: { position: { y: 0.05 } } } },
 			duration: 1,
 			easing: MRE.AnimationEaseCurves.EaseOutSine
 		});	
 		MRE.Animation.AnimateTo(this.context, gearModel.position, {
-			destination: { transform: { local: { position: { y: 0.350 } } } },
+			destination: { transform: { local: { position: { y: 0.05 } } } },
 			duration: 1,
 			easing: MRE.AnimationEaseCurves.EaseOutSine
 		});	
@@ -321,7 +342,7 @@ export default class SolarSystem {
 			easing: MRE.AnimationEaseCurves.EaseOutSine,
 		});
 		MRE.Animation.AnimateTo(this.context, gearModel.position, {
-			destination: { transform: { local: { position: { y: 0.250} } } },
+			destination: { transform: { local: { position: { y: 0} } } },
 			duration: 1,
 			easing: MRE.AnimationEaseCurves.EaseOutSine,
 		});
