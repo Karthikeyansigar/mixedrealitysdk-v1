@@ -4,7 +4,6 @@
  */
 
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
-import { MreArgumentError } from '@microsoft/mixed-reality-extension-sdk';
 
 /**
  * Solar system database
@@ -15,19 +14,8 @@ interface Database {
 
 interface DatabaseRecord {
 	name: string;
-	fileFormat: string;
 	parent: string;
 	diameter: number;       // km
-	modelpositionxAxis: number;
-	modelpositionyAxis: number;
-	modelpositionzAxis: number;	
-	modelrotationxAxis: number;
-	modelrotationyAxis: number;
-	modelrotationzAxis: number;   
-	labelpositionxAxis: number;
-	labelpositionyAxis: number;
-	labelpositionzAxis: number;	
-	appearance: boolean;
 	distance: number;       // 10^6 km
 	day: number;            // hours
 	year: number;           // days
@@ -61,10 +49,8 @@ export default class SolarSystem {
 	private celestialBodies: CelestialBodySet = {};
 	private animationsRunning = false;
 	private assets: MRE.AssetContainer;
-	public labelLoopInc = 0;
-	public gearLoopInc = 0;
+	public loopInc = 0;
 	public animationLoopIterval: any;
-	public childBoxTimeout: any;
 
 	constructor(private context: MRE.Context) {
 		this.assets = new MRE.AssetContainer(context);
@@ -120,7 +106,7 @@ export default class SolarSystem {
 
 		const scaleMultiplier = Math.pow(facts.diameter, 1 / 3) / 25;
 
-		const positionValue = { x: facts.modelpositionxAxis, y: facts.modelpositionyAxis, z: facts.modelpositionzAxis };
+		const positionValue = { x: 0, y: 0, z: 0 };
 		const scaleValue = { x: scaleMultiplier / 2, y: scaleMultiplier / 2, z: scaleMultiplier / 2 };
 		const obliquityValue = MRE.Quaternion.RotationAxis(
 			MRE.Vector3.Forward(), facts.obliquity * MRE.DegreesToRadians);
@@ -161,9 +147,7 @@ export default class SolarSystem {
 					name: `${bodyName}-label`,
 					parentId: position.id,
 					transform: {
-						local: { position: { x: facts.labelpositionxAxis, 
-							y: facts.labelpositionyAxis, 
-							z: facts.labelpositionzAxis } }
+						local: { position: { x: 0, y: 0.4, z: 0 } }
 					}
 				}
 			});
@@ -184,9 +168,9 @@ export default class SolarSystem {
 			});
 
 			// load the model if it hasn't been already
-			let prefab = this.assets.prefabs.find(p => p.source.uri === `assets/${bodyName}.`+facts.fileFormat);
+			let prefab = this.assets.prefabs.find(p => p.source.uri === `assets/${bodyName}.glb`);
 			if (!prefab) {
-				const modelData = await this.assets.loadGltf(`assets/${bodyName}.`+facts.fileFormat, "box");
+				const modelData = await this.assets.loadGltf(`assets/${bodyName}.glb`, "box");
 				prefab = modelData.find(a => a.prefab !== null).prefab;
 			}
 
@@ -197,24 +181,43 @@ export default class SolarSystem {
 					parentId: obliquity1.id,
 					transform: {
 						local: { 
-							scale: scaleValue,
-							rotation : {x: facts.modelrotationxAxis, 
-								y: facts.modelrotationyAxis, 
-								z: facts.modelrotationzAxis}									 
+							scale: scaleValue,									 
 						}
 					},
 					collider: {
 						geometry: {
 							shape: MRE.ColliderType.Sphere,
-							radius: 0
+							radius: 0.5
 						}
 					}
 				}
 			});
-			model.appearance.enabled = facts.appearance;
-						
+			
+			
 			const buttonBehavior = model.setBehavior(MRE.ButtonBehavior);
 			
+			buttonBehavior.onHover('enter', () => {
+				clearInterval(this.animationLoopIterval);
+				//model.transform.local.scale.y = modelOriginalHeight + 5;
+				MRE.Animation.AnimateTo(this.context, position, {
+					destination: { transform: { local: { position: { y: 0.05 } } } },
+					duration: 1,
+					easing: MRE.AnimationEaseCurves.EaseOutSine
+				});								
+			});
+
+			
+			buttonBehavior.onHover('exit', () => {
+				this.animationPlayPause(bodyName);
+				//model.transform.local.scale.y = modelOriginalHeight;
+				MRE.Animation.AnimateTo(this.context, position, {
+					destination: { transform: { local: { position: { y: 0} } } },
+					duration: 1,
+					easing: MRE.AnimationEaseCurves.EaseOutSine
+				});
+				
+			});
+
 			label.enableText({
 				contents: facts.name,
 				height: 0.05,
@@ -234,40 +237,8 @@ export default class SolarSystem {
 				model,
 				label
 			} as CelestialBody;	
-
-			if(facts.name !== ""){
-				this.animationPlayPause(bodyName);
-				buttonBehavior.onClick(() => {
-					this.childModelDisplay();			
-				});			
-				
-				buttonBehavior.onHover('enter', () => {
-					this.boxAnimationEnter();								
-				});			
-				buttonBehavior.onHover('exit', () => {
-					this.animationPlayPause(bodyName);
-					this.boxAnimationExit();				
-				});
-			}
-
-
-			if(bodyName === "only_gear"){				
-				const AnimData: MRE.AnimationDataLike = { tracks: [{
-					target: MRE.ActorPath("model").transform.local.rotation,
-					relative: true,
-					easing: MRE.AnimationEaseCurves.Linear,
-					keyframes: [
-						//{ time: 0.3, value: MRE.Quaternion.FromEulerAngles(0, 0, -Math.PI / 2) }
-						{time: 0.3, value: MRE.Quaternion.FromEulerAngles(0, 0, 5) }
-					]
-				}]};
-
-				this.assets = new MRE.AssetContainer(this.context);
-				const animData = this.assets.createAnimationData('anim', AnimData);
-				animData.bind({model}, { wrapMode: MRE.AnimationWrapMode.Loop, isPlaying: true });
-				
-			}
 			
+			this.animationPlayPause(bodyName);
 
 		} catch (e) {
 			MRE.log.info('app', `createBody failed ${bodyName}, ${e}`);
@@ -277,84 +248,21 @@ export default class SolarSystem {
 	private animationPlayPause(bodyName: string) {
 		const celestialBody = this.celestialBodies[bodyName];
 		this.animationLoopIterval = setInterval(() => {			
-			if(this.labelLoopInc < 5) {
-				celestialBody.label.transform.local.position.y = 
-				celestialBody.label.transform.local.position.y + 0.01;
-				this.labelLoopInc = this.labelLoopInc + 1;
-				if(this.labelLoopInc === 5){
-					this.labelLoopInc = 10;
+			if(this.loopInc < 5) {
+				celestialBody.label.transform.local.position.y = celestialBody.label.transform.local.position.y + 0.01;
+				this.loopInc = this.loopInc + 1;
+				if(this.loopInc === 5){
+					this.loopInc = 10;
 				}
 			}
 			else{
 				
-				celestialBody.label.transform.local.position.y = 
-				celestialBody.label.transform.local.position.y - 0.01;
-				this.labelLoopInc = this.labelLoopInc - 1;
-				if(this.labelLoopInc === 5){
-					this.labelLoopInc = 0;
+				celestialBody.label.transform.local.position.y = celestialBody.label.transform.local.position.y - 0.01;
+				this.loopInc = this.loopInc - 1;
+				if(this.loopInc === 5){
+					this.loopInc = 0;
 				}
 			}				
 		}, 100);
-	}
-	private boxAnimationEnter() {
-		clearInterval(this.animationLoopIterval);
-		const boxModel = this.celestialBodies["box_model_cloud"];
-		const gearModel = this.celestialBodies["only_gear"];
-		MRE.Animation.AnimateTo(this.context, boxModel.position, {	
-			destination: { transform: { local: { position: { y: 0.1 } } } },
-			duration: 1,
-			easing: MRE.AnimationEaseCurves.EaseOutSine
-		});	
-		MRE.Animation.AnimateTo(this.context, gearModel.position, {
-			destination: { transform: { local: { position: { y: 0.350 } } } },
-			duration: 1,
-			easing: MRE.AnimationEaseCurves.EaseOutSine
-		});	
-	}
-	private boxAnimationExit() {
-		const boxModel = this.celestialBodies["box_model_cloud"];
-		const gearModel = this.celestialBodies["only_gear"];
-		
-		MRE.Animation.AnimateTo(this.context, boxModel.position, {
-			destination: { transform: { local: { position: { y: 0} } } },
-			duration: 1,
-			easing: MRE.AnimationEaseCurves.EaseOutSine,
-		});
-		MRE.Animation.AnimateTo(this.context, gearModel.position, {
-			destination: { transform: { local: { position: { y: 0.250} } } },
-			duration: 1,
-			easing: MRE.AnimationEaseCurves.EaseOutSine,
-		});
-		this.childBoxTimeout = setTimeout(() => {	
-			this.celestialBodies["popup_model"].model.appearance.enabled = false;	
-		},3000);
-	}
-	private gearAnimation(bodyName: string) {
-		const celestialBody = this.celestialBodies[bodyName];
-		setInterval(() => {			
-			if(this.gearLoopInc < 10) {
-				celestialBody.model.transform.local.rotation.x = 
-				celestialBody.model.transform.local.rotation.x + 0.01;
-				this.gearLoopInc = this.gearLoopInc + 1;
-				if(this.gearLoopInc === 10){
-					this.gearLoopInc = 20;
-				}
-			}
-			else{
-				
-				celestialBody.model.transform.local.rotation.x = 
-				celestialBody.model.transform.local.rotation.x - 0.01;
-				this.gearLoopInc = this.gearLoopInc - 1;
-				if(this.gearLoopInc === 10){
-					this.gearLoopInc = 0;
-				}
-			}				
-		}, 100);
-	}
-	private childModelDisplay() {
-		clearTimeout(this.childBoxTimeout);
-		const celestialBody = this.celestialBodies["popup_model"];	
-		celestialBody.model.appearance.enabled = true;		
-			
 	}
 }
