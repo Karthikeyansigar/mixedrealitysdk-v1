@@ -356,7 +356,7 @@ export default class SolarSystem {
 					this.gearLoopInc = 0;
 				}
 			}				
-		}, 100);
+		}, 100); 
 	}
 	private childModelDisplay() {
 		clearTimeout(this.childBoxTimeout);
