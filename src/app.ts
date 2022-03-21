@@ -326,7 +326,14 @@ export default class SolarSystem {
 			easing: MRE.AnimationEaseCurves.EaseOutSine,
 		});
 		this.childBoxTimeout = setTimeout(() => {	
-			this.celestialBodies["popup_model"].model.appearance.enabled = false;	
+			//this.celestialBodies["popup_model"].model.appearance.enabled = false;	
+			const scaleMultiplier = Math.pow(0, 1 / 3) / 25;		
+			const scaleValue = { x: scaleMultiplier / 2, y: scaleMultiplier / 2, z: scaleMultiplier / 2 };
+			MRE.Animation.AnimateTo(this.context, this.celestialBodies["popup_model"].model, {
+				destination: { transform: { local: { scale: scaleValue } } },
+				duration: 1,
+				easing: MRE.AnimationEaseCurves.EaseOutSine,
+			});
 		},3000);
 	}
 	private gearAnimation(bodyName: string) {
@@ -354,7 +361,14 @@ export default class SolarSystem {
 	private childModelDisplay() {
 		clearTimeout(this.childBoxTimeout);
 		const celestialBody = this.celestialBodies["popup_model"];	
-		celestialBody.model.appearance.enabled = true;		
+		celestialBody.model.appearance.enabled = true;	
+		const scaleMultiplier = Math.pow(1000, 1 / 3) / 25;		
+		const scaleValue = { x: scaleMultiplier / 2, y: scaleMultiplier / 2, z: scaleMultiplier / 2 };
+		MRE.Animation.AnimateTo(this.context, celestialBody.model, {
+			destination: { transform: { local: { scale: scaleValue } } },
+			duration: 1,
+			easing: MRE.AnimationEaseCurves.EaseOutSine,
+		});
 			
 	}
 }

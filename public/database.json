@@ -42,7 +42,7 @@
     "popup_model": {
         "name": "",
         "fileFormat": "glb",
-        "diameter": 1000,
+        "diameter": 0,
         "modelpositionxAxis":1.2,
         "modelpositionyAxis":0.5,
         "modelpositionzAxis":0,
